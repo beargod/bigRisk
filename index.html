@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang=zh-CN>
+<head>
+    <meta charset=utf-8>
+    <meta http-equiv=X-UA-Compatible content="IE=edge">
+    <meta name=viewport content="width=device-width,initial-scale=1">
+    <title>BigRisk - 区块链上的大冒险</title>
+    <meta name=keywords content="">
+    <meta name=author content=laoc>
+    <link href=https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css rel=stylesheet>
+    <link href=https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css rel=stylesheet>
+    <link href=css/site.min.css?1526622111831 rel=stylesheet>
+    <script src="js/jquery-3.3.1.min.js"></script>
+    <script src="js/md5.js"></script>
+    <script src="js/nebPay.js"></script>
+    <script src="js/vue.js"></script>
+</head>
+<header class=site-header>
+
+    <nav class="navbar navbar-static-top main-navbar" id=top>
+        <div class=container>
+            <nav id=bs-navbar class="collapse navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="http://blog.bootcdn.cn/">合约</a></li>
+                    <li><a href="http://blog.bootcdn.cn/">Github</a></li>
+                    <li><a href="http://blog.bootcdn.cn/">Nebulas</a></li>
+                </ul>
+            </nav>
+        </div>
+    </nav>
+    <div class="container jumbotron vue-head">
+        <div class=row>
+            <div class=col-xs-12><h1>BigRisk</h1>
+                <p>区块链上的大冒险游戏<br><span class=package-amount>共收录了 <strong>{{size}}</strong> 个挑战</span></p>
+                <div class=search-wraper role=upload>
+                    <div class=form-group>
+                        <input class="form-control search clearable" v-model="create_risk" placeholder=我也来创建一个挑战
+                               autocomplete=off autofocus tabindex=0 autocorrect=off
+                               autocapitalize=off spellcheck=false>
+                        <i class="fa fa-plus" @click="createRisk"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+
+            <a class="btn btn-large btn-primary" @click="start">开始挑战</a>
+
+        </div>
+    </div>
+</header>
+
+<body class=home-template>
+<div class="risk-app">
+
+    <div class="content" v-if="!is_load&&!network_error">
+
+        <div class="container mtitle">
+            <h1 class="stitle">当前挑战</h1>
+        </div>
+
+        <div class=container>
+            <div class="package packages list-group-item" v-if="current_risk">
+                <div class="row">
+                    <div class=col-md-5><h4 class=package-name>{{current_risk.startTime}}</h4></div>
+                    <div class="col-md-5 hidden-xs"><p class=package-description>{{current_risk.risk}}</p></div>
+                    <div class="package-extra-info col-md-5 col-md-offset-5 col-xs-12">
+                        <span><i class="fa fa-star" @click="like(risk.id)"></i> {{current_risk.like}}</span>
+                        <span><i class="fa fa-thumbs-down" @click="unlike(risk.id)"></i> {{current_risk.unlike}}</span>
+                        <span><i class="fa fa-users"></i> {{current_risk.appear}}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="list-group" v-cloak v-show="!current_risk">
+                <a class="getAll list-group-item all-packages">你当前没有任何挑战</a>
+            </div>
+        </div>
+
+        <div class="container mtitle">
+            <h1 class="stitle">我的挑战</h1>
+        </div>
+
+        <div class=container>
+            <div class="list-group packages" v-if="myItems[0]">
+                <div class="package list-group-item" v-for="(risk,index) in myItems">
+                    <div class="row">
+                        <div class=col-md-5><h4 class=package-name>{{risk.startTime}}</h4></div>
+                        <div class="col-md-5 hidden-xs">
+                            <p class=package-description>{{risk.risk}}</p>
+                        </div>
+                        <div class="package-extra-info col-md-5 col-md-offset-5 col-xs-12">
+                            <span><i class="fa fa-star" @click="like(risk.id)"></i> {{risk.like}}</span>
+                            <span><i class="fa fa-thumbs-down"
+                                     @click="unlike(risk.id)"></i> {{risk.unlike}}</span>
+                            <span><i class="fa fa-users"></i> {{risk.appear}}</span>
+                        </div>
+                        <div class="col-md-1 ">
+                            <a class="btn btn-large btn-primary " @click="addRisk(index)" v-if="risk.isAdd">加入区块链</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="list-group" v-cloak v-show="!myItems[0]&&web_wallet">
+                <a class="getAll list-group-item all-packages">你还没有挑战过哦，欢迎尝试</a>
+            </div>
+        </div>
+
+
+        <div class="container">
+            <h1 class="stitle">挑战列表</h1>
+        </div>
+
+        <div class=container>
+            <div class="list-group packages" v-if="riskItems[0]">
+                <div class="package list-group-item" v-for="(risk,index) in riskItems">
+                    <div class="row">
+                        <div class=col-md-5><h4 class=package-name>{{risk.creater}}</h4></div>
+                        <div class="col-md-5 hidden-xs"><p class=package-description>{{risk.risk}}</p></div>
+                        <div class="package-extra-info col-md-5 col-md-offset-5 col-xs-12">
+                            <span><i class="fa fa-star" @click="like(risk.id)"></i> {{risk.like}}</span>
+                            <span><i class="fa fa-thumbs-down"
+                                     @click="unlike(risk.id)"></i> {{risk.unlike}}</span>
+                            <span><i class="fa fa-users"></i> {{risk.appear}}</span>
+                        </div>
+                    </div>
+                </div>
+                <a class="getAll list-group-item all-packages" target=_blank v-if="size_number>20" @click="allRisk">所有挑战列表</a>
+            </div>
+            <div class="list-group" v-cloak v-show="!riskItems[0]">
+                <a class="getAll list-group-item all-packages">暂无挑战，欢迎添加</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="content text-center" v-show="is_load&&!network_error">
+        <div class="their-loading">
+            <img src="img/lock-item-loader.gif"/>
+        </div>
+        <p>正在从区块链上获取信息，请耐心等待......</p>
+        <p v-show="!web_wallet">没添加<a target="_blank"
+                                      href="https://github.com/ChengOrangeJu/WebExtensionWallet">星云钱包插件</a>或插件上的网络地址不是正式网络将导致无法正常使用服务</p>
+    </div>
+
+    <div class="content text-center" v-show="network_error">
+        <div class="loading">
+            <p>区块链网络抽风啦，请稍后再试......</p>
+        </div>
+    </div>
+</div>
+
+<footer id=footer class="footer hidden-print">
+    <div class="container text-center">
+        <p>BIG RISK use <a href="https://getbootstrap.com/">NEBULAS</a>, by <a
+                href="https://github.com/beargod">@laoc</a>.</p>
+    </div>
+</footer>
+<a href=# id=back-to-top style="display: inline;"><i class="fa fa-angle-up"></i></a>
+</body>
+
+<script>
+
+    var head = new Vue({
+        el: ".vue-head",
+        data: {
+            create_risk: "",
+            size:0
+        },
+        methods: {
+            createRisk: function () {
+                isWallet();
+                if (!this.create_risk) {
+                    alert("挑战不能为空");
+                    return
+                }
+                createRisk1(this.create_risk);
+            },
+            start: function () {
+                isWallet();
+                start();
+            }
+        }
+    });
+
+    var vm = new Vue({
+        el: ".risk-app",
+        data: {
+            network_error:0,
+            is_load: 1,
+            web_wallet: 1,
+            my_risk: "",
+            page_size: 1,
+            size_number: 0,
+            web_wallet: 1,
+            riskItems: [],
+            current_risk: null,
+            myItems: []
+        },
+        methods: {
+            like: function (select_id) {
+                isWallet();
+                like(select_id);
+            },
+            unlike: function (select_id) {
+                isWallet();
+                unlike(select_id)
+            },
+            allRisk: function () {
+                allRisk();
+            },
+            addRisk:function (select_id) {
+                addRisk(select_id);
+            }
+        }
+    });
+
+
+    var NebPay = require("nebpay"); //https://github.com/nebulasio/nebPay
+    var nebPay = new NebPay();
+    var dappAddress = "n1uv733Gfbg5BuBuNfYV2oqT67S5gDXxgdS";
+
+    //检查扩展是否已安装
+    //如果安装了扩展，var“webExtensionWallet”将被注入到web页面中1
+    if (typeof(webExtensionWallet) === "undefined") {
+        //alert ("扩展钱包未安装，请先安装.")
+        vm.$data.web_wallet = 0;
+    }
+    getRisksNumber();
+    getHistoryRisk();
+
+    function getHistoryRisk() {
+        var value = 0;
+        var callArgs = ""
+        nebPay.simulateCall(dappAddress, value, "getHistory", callArgs, {
+            listener: cbHistory
+        });
+    }
+
+    function cbHistory(rs) {
+        cbnetwork(rs);
+        vm.$data.myItems = JSON.parse(rs.result);
+        if (vm.$data.myItems == null){
+            vm.$data.myItems = new Array();
+        }else {
+                vm.$data.myItems = JSON.parse(rs.result).map(function(my) {
+                    my.startTime = new Date(my.startTime).format("yyyy-MM-dd hh:mm:ss");
+                    return my;
+                });
+                vm.$data.myItems.reverse();
+        }
+    }
+
+    function isWallet() {
+        if (vm.$data.web_wallet == 0) {
+            alert("扩展钱包未安装，请先安装.");
+        }
+        return;
+    }
+
+    function allRisk() {
+        var value = 0;
+        var callArgs = ""
+        nebPay.simulateCall(dappAddress, value, "size", callArgs, {
+            listener: cbAllRisk
+        });
+    }
+
+    function addRisk(index) {
+        var value = 0;
+        var select_id = vm.$data.myItems[index].id;
+        vm.$data.myItems[index].isAdd=0;
+        var call_function = "addHistory";
+        var call_args = "[" + select_id + "]";
+        nebPay.call(dappAddress, value, call_function, call_args, { //使用nebpay的call接口去调用合约,
+            listener: cbAddRisk
+        });
+    }
+    
+    function cbAddRisk() {
+
+    }
+
+    function getRisksNumber() {
+        var value = 0;
+        var callArgs = ""
+        nebPay.simulateCall(dappAddress, value, "size", callArgs, {
+            listener: cbRiskNumber
+        });
+    }
+
+    function cbRiskNumber(rs) {
+        cbnetwork(rs);
+        // if(rs.result != 0){
+        var number = parseInt(rs.result);
+        head.$data.size = number;
+        vm.$data.size_number = number;
+        var first_number = number > 20 ? 20 : number;
+        getRisks(0, first_number);
+        // }
+    }
+
+    function cbAllRisk(rs) {
+        cbnetwork(rs);
+        var number = parseInt(rs.result);
+        head.$data.size = number;
+        vm.$data.size_number = number;
+        getRisks(0, number);
+    }
+
+    function cbRisks(rs) {
+        vm.$data.is_load = 0;
+        cbnetwork(rs);
+        vm.$data.riskItems = JSON.parse(rs.result);
+
+        if (vm.$data.riskItems == null){
+            vm.$data.riskItems = new Array();
+        }
+    }
+
+    function getRisks(begin, end) {
+        var value = 0;
+        var callArgs = "[" + begin + "," + end + "]"
+        nebPay.simulateCall(dappAddress, value, "get", callArgs, {
+            listener: cbRisks
+        });
+    }
+
+    function createRisk1(create_risk) {
+        var value = 0;
+        var call_function = "add";
+        var call_args = "[\"" + create_risk + "\"]";
+        nebPay.call(dappAddress, value, call_function, call_args, { //使用nebpay的call接口去调用合约,
+            listener: cbCallTransaction
+        });
+    }
+
+    function like(riskId) {
+        var value = 0;
+        var call_args = [];
+        var call_function = "like";
+        call_args.push(riskId);
+        call_args = "[" + call_args.toString() + "]";
+        nebPay.call(dappAddress, value, call_function, call_args, { //使用nebpay的call接口去调用合约,
+            listener: cbCallTransaction
+        });
+    }
+
+    function unlike(riskId) {
+        var value = 0;
+        var call_args = [];
+        var call_function = "unlike";
+        call_args.push(riskId);
+        call_args = "[" + call_args.toString() + "]";
+        nebPay.call(dappAddress, value, call_function, call_args, { //使用nebpay的call接口去调用合约,
+            listener: cbCallTransaction
+        });
+    }
+
+    function cbnetwork(rs) {
+        if (rs=="Network Error"){
+            vm.$data.network_error=1;
+        }
+    }
+
+    function start() {
+        var value = 0;
+        var call_function = "start";
+        var call_args = "[]";
+        nebPay.simulateCall(dappAddress, value, call_function, call_args, { //使用nebpay的call接口去调用合约,
+            listener: cbStartRisk
+        });
+    }
+
+    function cbCallTransaction(resp) {
+        cbnetwork(resp);
+        alert("数据以提交到区块上");
+    }
+
+    function cbStartRisk(rs) {
+        cbnetwork(rs);
+        var result = JSON.parse(rs.result);
+        vm.$data.current_risk = result;
+        result.startTime = new Date().format("yyyy-MM-dd hh:mm:ss");
+        result.isAdd = 1;
+        if(!vm.$data.myItems){
+            vm.$data.myItems = new Array();
+        }
+        vm.$data.myItems.splice(0,0,result);
+    }
+
+
+    Date.prototype.format = function (format) {
+        var date = {
+            "M+": this.getMonth() + 1,
+            "d+": this.getDate(),
+            "h+": this.getHours(),
+            "m+": this.getMinutes(),
+            "s+": this.getSeconds(),
+            "q+": Math.floor((this.getMonth() + 3) / 3),
+            "S+": this.getMilliseconds()
+        };
+        if (/(y+)/i.test(format)) {
+            format = format.replace(RegExp.$1, (this.getFullYear() + '').substr(4 - RegExp.$1.length));
+        }
+        for (var k in date) {
+            if (new RegExp("(" + k + ")").test(format)) {
+                format = format.replace(RegExp.$1, RegExp.$1.length == 1
+                    ? date[k] : ("00" + date[k]).substr(("" + date[k]).length));
+            }
+        }
+        return format;
+    }
+</script>
+</html>
