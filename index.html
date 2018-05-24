@@ -65,8 +65,8 @@
                     <div class=col-md-5><h4 class=package-name>{{current_risk.startTime}}</h4></div>
                     <div class="col-md-5 hidden-xs"><p class=package-description>{{current_risk.risk}}</p></div>
                     <div class="package-extra-info col-md-5 col-md-offset-5 col-xs-12">
-                        <span><i class="fa fa-star" @click="like(risk.id)"></i> {{current_risk.like}}</span>
-                        <span><i class="fa fa-thumbs-down" @click="unlike(risk.id)"></i> {{current_risk.unlike}}</span>
+                        <span><i class="fa fa-star" @click="like(current_risk.id)"></i> {{current_risk.like}}</span>
+                        <span><i class="fa fa-thumbs-down" @click="unlike(current_risk.id)"></i> {{current_risk.unlike}}</span>
                         <span><i class="fa fa-users"></i> {{current_risk.appear}}</span>
                     </div>
                 </div>
@@ -138,7 +138,8 @@
         </div>
         <p>正在从区块链上获取信息，请耐心等待......</p>
         <p v-show="!web_wallet">没添加<a target="_blank"
-                                      href="https://github.com/ChengOrangeJu/WebExtensionWallet">星云钱包插件</a>或插件上的网络地址不是正式网络将导致无法正常使用服务</p>
+                                      href="https://github.com/ChengOrangeJu/WebExtensionWallet">星云钱包插件</a>或插件上的网络地址不是正式网络将导致无法正常使用服务
+        </p>
     </div>
 
     <div class="content text-center" v-show="network_error">
@@ -158,12 +159,13 @@
 </body>
 
 <script>
+    var setInterval;
 
     var head = new Vue({
         el: ".vue-head",
         data: {
             create_risk: "",
-            size:0
+            size: 0
         },
         methods: {
             createRisk: function () {
@@ -184,7 +186,7 @@
     var vm = new Vue({
         el: ".risk-app",
         data: {
-            network_error:0,
+            network_error: 0,
             is_load: 1,
             web_wallet: 1,
             my_risk: "",
@@ -207,7 +209,7 @@
             allRisk: function () {
                 allRisk();
             },
-            addRisk:function (select_id) {
+            addRisk: function (select_id) {
                 addRisk(select_id);
             }
         }
@@ -238,14 +240,14 @@
     function cbHistory(rs) {
         cbnetwork(rs);
         vm.$data.myItems = JSON.parse(rs.result);
-        if (vm.$data.myItems == null){
+        if (vm.$data.myItems == null) {
             vm.$data.myItems = new Array();
-        }else {
-                vm.$data.myItems = JSON.parse(rs.result).map(function(my) {
-                    my.startTime = new Date(my.startTime).format("yyyy-MM-dd hh:mm:ss");
-                    return my;
-                });
-                vm.$data.myItems.reverse();
+        } else {
+            vm.$data.myItems = JSON.parse(rs.result).map(function (my) {
+                my.startTime = new Date(my.startTime).format("yyyy-MM-dd hh:mm:ss");
+                return my;
+            });
+            vm.$data.myItems.reverse();
         }
     }
 
@@ -267,17 +269,72 @@
     function addRisk(index) {
         var value = 0;
         var select_id = vm.$data.myItems[index].id;
-        vm.$data.myItems[index].isAdd=0;
+        vm.$data.myItems[index].isAdd = 0;
         var call_function = "addHistory";
         var call_args = "[" + select_id + "]";
-        nebPay.call(dappAddress, value, call_function, call_args, { //使用nebpay的call接口去调用合约,
-            listener: cbAddRisk
-        });
+        var options = { //使用nebpay的call接口去调用合约,
+            listener: function (rs) {
+                cbnetwork(rs);
+                if (rs.hasOwnProperty('txhash') && rs.txhash) {
+                    vm.$data.myItems[index].isAdd = 0;
+                    refreshAppearData(vm.$data.myItems[index].id);
+                    alert("数据以及打包提交到链上，等待确认后将会自动刷新数据")
+                }
+            }
+        };
+        nebPay.call(dappAddress, value, call_function, call_args, options);
     }
-    
-    function cbAddRisk() {
 
+    function refreshAppearData(id) {
+        for (var i = 0; i < vm.$data.myItems.length; i++) {
+            if (vm.$data.myItems[i].id === id) {
+                vm.$data.myItems[i].appear ++;
+            }
+        }
+
+        for (var i = 0; i < vm.$data.riskItems.length; i++) {
+            if (vm.$data.riskItems[i].id === id) {
+                vm.$data.riskItems[i].appear ++;
+            }
+        }
     }
+
+    function refreshLikeData(id) {
+        if (vm.$data.current_risk&&vm.$data.current_risk.id === id) {
+            vm.$data.current_risk.like ++;
+        }
+
+        for (var i = 0; i < vm.$data.myItems.length; i++) {
+            if (vm.$data.myItems[i].id === id) {
+                vm.$data.myItems[i].like ++;
+            }
+        }
+
+        for (var i = 0; i < vm.$data.riskItems.length; i++) {
+            if (vm.$data.riskItems[i].id === id) {
+                vm.$data.riskItems[i].like ++;
+            }
+        }
+    }
+
+    function refreshUnlikeData(id) {
+        if (vm.$data.current_risk&&vm.$data.current_risk.id === id) {
+            vm.$data.current_risk.unlike ++;
+        }
+
+        for (var i = 0; i < vm.$data.myItems.length; i++) {
+            if (vm.$data.myItems[i].id === id) {
+                vm.$data.myItems[i].unlike ++;
+            }
+        }
+
+        for (var i = 0; i < vm.$data.riskItems.length; i++) {
+            if (vm.$data.riskItems[i].id === id) {
+                vm.$data.riskItems[i].unlike ++;
+            }
+        }
+    }
+
 
     function getRisksNumber() {
         var value = 0;
@@ -288,7 +345,7 @@
     }
 
     function cbRiskNumber(rs) {
-        cbnetwork(rs);
+        cbnetwork(rs, "size");
         // if(rs.result != 0){
         var number = parseInt(rs.result);
         head.$data.size = number;
@@ -299,7 +356,7 @@
     }
 
     function cbAllRisk(rs) {
-        cbnetwork(rs);
+        cbnetwork(rs, "size");
         var number = parseInt(rs.result);
         head.$data.size = number;
         vm.$data.size_number = number;
@@ -308,10 +365,10 @@
 
     function cbRisks(rs) {
         vm.$data.is_load = 0;
-        cbnetwork(rs);
+        cbnetwork(rs, "risks");
         vm.$data.riskItems = JSON.parse(rs.result);
 
-        if (vm.$data.riskItems == null){
+        if (vm.$data.riskItems == null) {
             vm.$data.riskItems = new Array();
         }
     }
@@ -328,9 +385,17 @@
         var value = 0;
         var call_function = "add";
         var call_args = "[\"" + create_risk + "\"]";
-        nebPay.call(dappAddress, value, call_function, call_args, { //使用nebpay的call接口去调用合约,
-            listener: cbCallTransaction
-        });
+        var options = { //使用nebpay的call接口去调用合约,
+            listener: function (rs) {
+                cbnetwork(rs);
+                if (rs.hasOwnProperty('txhash') && rs.txhash) {
+                    head.$data.size++;
+                    getRisksNumber();
+                    alert("数据以及打包提交到链上，等待确认后将会自动刷新数据")
+                }
+            }
+        };
+        nebPay.call(dappAddress, value, call_function, call_args, options);
     }
 
     function like(riskId) {
@@ -339,9 +404,17 @@
         var call_function = "like";
         call_args.push(riskId);
         call_args = "[" + call_args.toString() + "]";
-        nebPay.call(dappAddress, value, call_function, call_args, { //使用nebpay的call接口去调用合约,
-            listener: cbCallTransaction
-        });
+        var options = { //使用nebpay的call接口去调用合约,
+            listener: function (rs) {
+                cbnetwork(rs);
+                if (rs.hasOwnProperty('txhash') && rs.txhash) {
+
+                    refreshLikeData(riskId);
+                    alert("数据以及打包提交到链上，等待确认后将会自动刷新数据")
+                }
+            }
+        };
+        nebPay.call(dappAddress, value, call_function, call_args,options);
     }
 
     function unlike(riskId) {
@@ -350,16 +423,32 @@
         var call_function = "unlike";
         call_args.push(riskId);
         call_args = "[" + call_args.toString() + "]";
-        nebPay.call(dappAddress, value, call_function, call_args, { //使用nebpay的call接口去调用合约,
-            listener: cbCallTransaction
-        });
+        var options = { //使用nebpay的call接口去调用合约,
+            listener: function (rs) {
+                cbnetwork(rs);
+                if (rs.hasOwnProperty('txhash') && rs.txhash) {
+                    refreshUnlikeData(riskId);
+                    alert("数据以及打包提交到链上，等待确认后将会自动刷新数据")
+                }
+            }
+        };
+        nebPay.call(dappAddress, value, call_function, call_args,options);
     }
 
     function cbnetwork(rs) {
-        if (rs=="Network Error"){
-            vm.$data.network_error=1;
+        if (rs == "Network Error") {
+            vm.$data.network_error = 1;
+            return
         }
+
+        if (rs == "Error: Transaction rejected by user") {
+            alert("由于你拒绝了交易，数据没有成功上传到链上");
+            return
+        }
+
+
     }
+
 
     function start() {
         var value = 0;
@@ -370,21 +459,16 @@
         });
     }
 
-    function cbCallTransaction(resp) {
-        cbnetwork(resp);
-        alert("数据以提交到区块上");
-    }
-
     function cbStartRisk(rs) {
         cbnetwork(rs);
         var result = JSON.parse(rs.result);
         vm.$data.current_risk = result;
         result.startTime = new Date().format("yyyy-MM-dd hh:mm:ss");
         result.isAdd = 1;
-        if(!vm.$data.myItems){
+        if (!vm.$data.myItems) {
             vm.$data.myItems = new Array();
         }
-        vm.$data.myItems.splice(0,0,result);
+        vm.$data.myItems.splice(0, 0, result);
     }
 
 
